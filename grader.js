@@ -30,7 +30,6 @@ var URL_DEFAULT = "http://intense-brook-9622.herokuapp.com/";
 var rest = require('restler');
 
 var assertFileExists = function(infile) {
-    console.log("assert fxn");
     var instr = infile.toString();
     if(!fs.existsSync(instr)) {
         console.log("%s does not exist. Exiting.", instr);
@@ -72,11 +71,18 @@ var checkURLFile = function(url,checksfile){
     return out;
 }
 
+
+var clone = function(fn) {
+    // Workaround for commander.js issue.
+    // http://stackoverflow.com/a/6772648
+    return fn.bind({});
+};
+
 if(require.main == module) {
     program
-        .option('-c, --checks ', 'Path to checks.json', assertFileExists, CHECKSFILE_DEFAULT)
-        .option('-f, --file ', 'Path to index.tml', assertFileExists, HTMLFILE_DEFAULT)
-        .option('-u, --url ' , 'Path to url', assertFileExists, URL_DEFAULT)
+        .option('-c, --checks [check_file] ', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
+        .option('-f, --file [html_file]', 'Path to index.tml', clone(assertFileExists), HTMLFILE_DEFAULT)
+        .option('-u, --url <url>' , 'Path to url', clone(assertFileExists), URL_DEFAULT)
         .parse(process.argv);
     if(program.file){
 	var checkJson = checkHtmlFile(program.file, program.checks);
