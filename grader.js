@@ -26,9 +26,11 @@ var program = require('commander');
 var cheerio = require('cheerio');
 var HTMLFILE_DEFAULT = "index.html";
 var CHECKSFILE_DEFAULT = "checks.json";
-var rest = require('./restler');
+var URL_DEFAULT = "http://intense-brook-9622.herokuapp.com/";
+var rest = require('restler');
 
 var assertFileExists = function(infile) {
+    console.log("assert fxn");
     var instr = infile.toString();
     if(!fs.existsSync(instr)) {
         console.log("%s does not exist. Exiting.", instr);
@@ -40,6 +42,9 @@ var assertFileExists = function(infile) {
 var cheerioHtmlFile = function(htmlfile) {
     return cheerio.load(fs.readFileSync(htmlfile));
 };
+var cheerioURLFile = function(url){
+    return cheerio.load(url);
+}
 
 var loadChecks = function(checksfile) {
     return JSON.parse(fs.readFileSync(checksfile));
@@ -56,14 +61,41 @@ var checkHtmlFile = function(htmlfile, checksfile) {
     return out;
 };
 
+var checkURLFile = function(url,checksfile){
+    $ = cheerioURLFile(url);
+    var checks = loadChecks(checksfile).sort();
+    var out = {};
+    for(var ii in checks) {
+        var present = $(checks[ii]).length > 0;
+        out[checks[ii]] = present;
+    }
+    return out;
+}
+
 if(require.main == module) {
     program
         .option('-c, --checks ', 'Path to checks.json', assertFileExists, CHECKSFILE_DEFAULT)
-        .option('-f, --file ', 'Path to index.html', assertFileExists, HTMLFILE_DEFAULT)
+        .option('-f, --file ', 'Path to index.tml', assertFileExists, HTMLFILE_DEFAULT)
+        .option('-u, --url ' , 'Path to url', assertFileExists, URL_DEFAULT)
         .parse(process.argv);
-    var checkJson = checkHtmlFile(program.file, program.checks);
-    var outJson = JSON.stringify(checkJson, null, 4);
-    console.log(outJson);
+    if(program.file){
+	var checkJson = checkHtmlFile(program.file, program.checks);
+	var outJson = JSON.stringify(checkJson, null, 4);
+	console.log(outJson);
+    }else if(program.url){
+//	console.log(program.url);
+	rest.get(program.url).on('complete', function(result) {
+	    if (result instanceof Error) {
+		sys.puts('Error: ' + result.message);
+		this.retry(5000); // try again after 5 sec
+	    } else {
+//		console.log(result);
+	    var checkJson=checkURLFile(result,program.checks);
+	    var outJson = JSON.stringify(checkJson, null, 4);
+	    console.log(outJson);
+		}
+	}); 
+    }   
 } else {
     exports.checkHtmlFile = checkHtmlFile;
 }
